@@ -1,7 +1,20 @@
-from git_python import *
-import ftplib, cStringIO, sys
+import ftplib
+import cStringIO
+import sys
+
+from git_python import Tree, Blob, Repo, Git
 
 def uploadAll(tree, ftp, base):
+    """Upload all items in a Git tree.
+    
+    Keyword arguments:
+    tree -- the git_python.Tree to upload contents of
+    ftp  -- the active ftplib.FTP object to upload contents to
+    base -- the string base directory to upload contents to in ftp. For example,
+            base = '/www/www'. base must exist and must not have a trailing
+            slash.
+    
+    """
     for node in tree.contents:
         ftp.cwd(base)
         if isinstance(node, Tree):
@@ -17,26 +30,56 @@ def uploadAll(tree, ftp, base):
             except ftplib.error_perm:
                 pass
             ftp.storbinary('STOR ' + node.name, file)
+            ftp.voidcmd('SITE CHMOD 755 ' + node.name)
             print 'Uploaded ' + '/'.join((base, node.name))
 
 def uploadDiff(diff, tree, ftp, base):
+    """Upload and/or delete items according to a Git diff.
+    
+    Keyword arguments:
+    diff -- a unified diff split into an array by newlines. Usually generated
+            with: repo.diff(orig_id, new_id).split("\n")
+    tree -- root git_python.Tree that diff file paths can be resolved to.
+    ftp  -- the active ftplib.FTP object to upload contents to
+    base -- the string base directory to upload contents to in ftp. For example,
+            base = '/www/www'. base must exist and must not have a trailing
+            slash.
+    
+    """
     for line in diff:
         if line.startswith('---') or line.startswith('+++'):
             delete = line.startswith('---')
-            file = line.split(' ', 2)[1]
+            file = line.split(' ', 1)[1]
             if file == '/dev/null':
                 continue
             # Remove bogus a or b directory git prepends to names
-            file = line.split('/', 2)[1]
+            file = line.split('/', 1)[1]
             target = '/'.join((base, file))
             if delete:
-                ftp.delete(target)
-                print 'Deleted ' + target
+                try:
+                    ftp.delete(target)
+                    print 'Deleted ' + target
+                except ftplib.error_perm:
+                    pass
             else:
-                blob = tree/file
-                file = cStringIO.StringIO(blob.data)
-                ftp.storbinary('STOR ' + target, file)
-                print 'Uploaded ' + target
+                node = tree/file
+                if isinstance(node, Tree):
+                    try:
+                        ftp.mkd(target)
+                        print 'Created directory ' + target
+                        # This holds the risk of missing files to upload if
+                        # the directory is created, but the files are not
+                        # complete.
+                        uploadAll(node, ftp, target)
+                    except ftplib.error_perm:
+                        pass
+                elif isinstance(node, Blob):
+                    file = cStringIO.StringIO(node.data)
+                    ftp.storbinary('STOR ' + target, file)
+                    ftp.voidcmd('SITE CHMOD 755 ' + target)
+                    print 'Uploaded ' + target
+                # Don't do anything if there isn't any item; maybe it
+                # was deleted.
 
 # Begin main body
 
