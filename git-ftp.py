@@ -1,14 +1,16 @@
+#!/usr/bin/env python
+
 import ftplib
 import cStringIO
 import sys
 
-from git_python import Tree, Blob, Repo, Git
+from git import Tree, Blob, Repo, Git
 
 def uploadAll(tree, ftp, base):
     """Upload all items in a Git tree.
     
     Keyword arguments:
-    tree -- the git_python.Tree to upload contents of
+    tree -- the git.Tree to upload contents of
     ftp  -- the active ftplib.FTP object to upload contents to
     base -- the string base directory to upload contents to in ftp. For example,
             base = '/www/www'. base must exist and must not have a trailing
@@ -39,7 +41,7 @@ def uploadDiff(diff, tree, ftp, base):
     Keyword arguments:
     diff -- a unified diff split into an array by newlines. Usually generated
             with: repo.diff(orig_id, new_id).split("\n")
-    tree -- root git_python.Tree that diff file paths can be resolved to.
+    tree -- root git.Tree that diff file paths can be resolved to.
     ftp  -- the active ftplib.FTP object to upload contents to
     base -- the string base directory to upload contents to in ftp. For example,
             base = '/www/www'. base must exist and must not have a trailing
