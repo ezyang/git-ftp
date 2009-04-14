@@ -2,7 +2,11 @@
 
 import ftplib
 import cStringIO
-import sys
+
+from sys import argv
+from getpass import getpass
+from os.path import isfile
+import ConfigParser
 
 from git import Tree, Blob, Repo, Git
 
@@ -17,7 +21,8 @@ def uploadAll(tree, ftp, base):
             slash.
     
     """
-    for node in tree.contents:
+    for item in tree.items():
+        node = tree[item[0]]
         ftp.cwd(base)
         if isinstance(node, Tree):
             try:
@@ -83,20 +88,66 @@ def uploadDiff(diff, tree, ftp, base):
                 # Don't do anything if there isn't any item; maybe it
                 # was deleted.
 
+def getFtpData():
+  """Retrieves the data to connect to the FTP from .git/ftpdata
+
+  ftpdata format example:
+   [ftp]
+   username=me
+   password=s00perP4zzw0rd
+   hostname=ftp.hostname.com
+   remotepath=/htdocs
+   repository=/home/me/website 
+  
+  Please note that it isn't necesary to have this file,
+  you'll be asked for the data every time you upload something.
+  """
+  FtpUser = FtpPassword = FtpHostname = ''
+  Repository = RemotePath = ''
+
+  if isfile(".git/ftpdata"):
+    cfg = ConfigParser.ConfigParser()
+    cfg.read(".git/ftpdata")
+
+    # just in case you do not want to store your ftp password.
+    try:
+      FtpPassword = cfg.get('ftp','password')
+    except: 
+      FtpPassword = getpass('FTP Password: ')
+    
+    FtpUser = cfg.get('ftp','username')
+    FtpHostname = cfg.get('ftp','hostname')
+    Repository = cfg.get('ftp','repository')
+    RemotePath = cfg.get('ftp','remotepath')
+  else:
+    FtpUser = raw_input('FTP Username: ')
+    FtpPassword = getpass('FTP Password: ')
+    FtpHostname = raw_input('FTP Hostname: ')
+    Repository = raw_input('Repository Path: ')
+    RemotePath = raw_input('Remote Path: ')
+
+  return {'username': FtpUser, 
+          'password': FtpPassword,
+          'hostname': FtpHostname,
+          'repository': Repository,
+          'remotepath': RemotePath,
+          }
+
 # Begin main body
 
 # Parse arguments
-username = sys.argv[1] # bob
-password = sys.argv[2] # foobar
-ftpsite  = sys.argv[3] # example.com
-base     = sys.argv[4] # /www/www (must already exist!)
-reposite = sys.argv[5] # /home/bob/website
+FtpData = getFtpData()
+username = FtpData['username']
+password = FtpData['password']  
+ftpsite  = FtpData['hostname']
+base     = FtpData['remotepath']
+reposite = FtpData['repository']
 
 # Windows doesn't like env
 Git.git_binary = 'git'
 
 repo   = Repo(reposite)
-commit = repo.commits('master', 1)[0];
+commit = repo.commits()[0]
 tree   = commit.tree
 ftp    = ftplib.FTP(ftpsite, username, password)
 
