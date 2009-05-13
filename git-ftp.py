@@ -1,5 +1,33 @@
 #!/usr/bin/env python
 
+"""
+git-ftp: painless, quick and easy working copy syncing over FTP
+
+Copyright (c) 2008-2009
+Edward Z. Yang <ezyang@mit.edu> and Mauro Lizaur <mauro@cacavoladora.org>
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import ftplib
 import cStringIO
 
@@ -12,14 +40,14 @@ from git import Tree, Blob, Repo, Git
 
 def uploadAll(tree, ftp, base):
     """Upload all items in a Git tree.
-    
+
     Keyword arguments:
     tree -- the git.Tree to upload contents of
     ftp  -- the active ftplib.FTP object to upload contents to
     base -- the string base directory to upload contents to in ftp. For example,
             base = '/www/www'. base must exist and must not have a trailing
             slash.
-    
+
     """
     for item in tree.items():
         node = tree[item[0]]
@@ -42,7 +70,7 @@ def uploadAll(tree, ftp, base):
 
 def uploadDiff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
-    
+
     Keyword arguments:
     diff -- a unified diff split into an array by newlines. Usually generated
             with: repo.diff(orig_id, new_id).split("\n")
@@ -51,7 +79,7 @@ def uploadDiff(diff, tree, ftp, base):
     base -- the string base directory to upload contents to in ftp. For example,
             base = '/www/www'. base must exist and must not have a trailing
             slash.
-    
+
     """
     for line in diff:
         if line.startswith('---') or line.startswith('+++'):
@@ -97,9 +125,9 @@ def getFtpData():
    password=s00perP4zzw0rd
    hostname=ftp.hostname.com
    remotepath=/htdocs
-   repository=/home/me/website 
-  
-  Please note that it isn't necesary to have this file,
+   repository=/home/me/website
+
+  Please note that it isn't necessary to have this file,
   you'll be asked for the data every time you upload something.
   """
   FtpUser = FtpPassword = FtpHostname = ''
@@ -112,9 +140,9 @@ def getFtpData():
     # just in case you do not want to store your ftp password.
     try:
       FtpPassword = cfg.get('ftp','password')
-    except: 
+    except:
       FtpPassword = getpass('FTP Password: ')
-    
+
     FtpUser = cfg.get('ftp','username')
     FtpHostname = cfg.get('ftp','hostname')
     Repository = cfg.get('ftp','repository')
@@ -126,7 +154,7 @@ def getFtpData():
     Repository = raw_input('Repository Path: ')
     RemotePath = raw_input('Remote Path: ')
 
-  return {'username': FtpUser, 
+  return {'username': FtpUser,
           'password': FtpPassword,
           'hostname': FtpHostname,
           'repository': Repository,
@@ -138,7 +166,7 @@ def getFtpData():
 # Parse arguments
 FtpData = getFtpData()
 username = FtpData['username']
-password = FtpData['password']  
+password = FtpData['password']
 ftpsite  = FtpData['hostname']
 base     = FtpData['remotepath']
 reposite = FtpData['repository']
