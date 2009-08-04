@@ -82,7 +82,7 @@ def uploadDiff(diff, tree, ftp, base):
 
     """
     for line in diff:
-        if line.startswith('---') or line.startswith('+++'):
+        if line.startswith('--- ') or line.startswith('+++ '):
             delete = line.startswith('---')
             file = line.split(' ', 1)[1]
             if file == '/dev/null':
