@@ -35,6 +35,7 @@ import os.path
 import getpass
 import ConfigParser
 import optparse
+import logging
 
 from git import Tree, Blob, Repo, Git
 
@@ -42,8 +43,11 @@ def main():
     Git.git_binary = 'git' # Windows doesn't like env
 
     repo, options, args = parse_args()
-    base = options.ftp.remotepath
 
+    if repo.is_dirty:
+        logging.warning("Working copy is dirty; uncommitted changes will NOT be uploaded")
+
+    base = options.ftp.remotepath
     commit = repo.commits()[0]
     tree   = commit.tree
     ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
@@ -76,7 +80,10 @@ that have changed."""
     parser = optparse.OptionParser(usage)
     parser.add_option('-f', '--force', dest="force", action="store_true", default=False,
             help="force the reupload of all files")
+    parser.add_option('-v', '--verbose', dest="verbose", action="store_true", default=False,
+            help="be verbose")
     options, args = parser.parse_args()
+    configure_logging(options)
     if len(args) > 1:
         parser.error("too many arguments")
     if args: cwd = args[0]
@@ -84,6 +91,14 @@ that have changed."""
     repo = Repo(cwd)
     get_ftp_creds(repo, options)
     return repo, options, args
+
+def configure_logging(options):
+    logger = logging.getLogger()
+    if options.verbose: logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(sys.stderr)
+    formatter = logging.Formatter("%(levelname)s: %(message)s")
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 class FtpData():
     password = None
@@ -112,6 +127,7 @@ def get_ftp_creds(repo, options):
     ftpdata = os.path.join(repo.path, "ftpdata")
     options.ftp = FtpData()
     if os.path.isfile(ftpdata):
+        logging.info("Using .git/ftpdata")
         cfg = ConfigParser.ConfigParser()
         cfg.read(ftpdata)
 
@@ -157,7 +173,7 @@ def upload_all(tree, ftp, base):
                 pass
             ftp.storbinary('STOR ' + node.name, file)
             ftp.voidcmd('SITE CHMOD 755 ' + node.name)
-            print 'Uploaded ' + '/'.join((base, node.name))
+            logging.info('Uploaded ' + '/'.join((base, node.name)))
 
 def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
@@ -184,7 +200,7 @@ def upload_diff(diff, tree, ftp, base):
             if delete:
                 try:
                     ftp.delete(target)
-                    print 'Deleted ' + target
+                    logging.info('Deleted ' + target)
                 except ftplib.error_perm:
                     pass
             else:
@@ -192,7 +208,7 @@ def upload_diff(diff, tree, ftp, base):
                 if isinstance(node, Tree):
                     try:
                         ftp.mkd(target)
-                        print 'Created directory ' + target
+                        logging.info('Created directory ' + target)
                         # This holds the risk of missing files to upload if
                         # the directory is created, but the files are not
                         # complete.
@@ -203,7 +219,7 @@ def upload_diff(diff, tree, ftp, base):
                     file = cStringIO.StringIO(node.data)
                     ftp.storbinary('STOR ' + target, file)
                     ftp.voidcmd('SITE CHMOD 755 ' + target)
-                    print 'Uploaded ' + target
+                    logging.info('Uploaded ' + target)
                 # Don't do anything if there isn't any item; maybe it
                 # was deleted.
 
