@@ -30,15 +30,106 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import ftplib
 import cStringIO
-
-from sys import argv
-from getpass import getpass
-from os.path import isfile
+import sys
+import os.path
+import getpass
 import ConfigParser
+import optparse
 
 from git import Tree, Blob, Repo, Git
 
-def uploadAll(tree, ftp, base):
+def main():
+    Git.git_binary = 'git' # Windows doesn't like env
+
+    repo, options, args = parse_args()
+    base = options.ftp.remotepath
+
+    commit = repo.commits()[0]
+    tree   = commit.tree
+    ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
+
+    # Check revision
+    hash = None
+    if not options.force:
+        hashFile = cStringIO.StringIO()
+        try:
+            ftp.retrbinary('RETR ' + base + '/git-rev.txt', hashFile.write)
+            hash = hashFile.getvalue()
+        except ftplib.error_perm:
+            pass
+
+    if not hash:
+        # Perform full upload
+        upload_all(tree, ftp, base)
+    else:
+        upload_diff(repo.diff(hash, commit.id).split("\n"), tree, ftp, base)
+
+    ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.id))
+    ftp.quit()
+
+def parse_args():
+    usage = """usage: %prog [DIRECTORY]
+
+This script uploads files in a Git repository to a
+website via FTP, but is smart and only uploads file
+that have changed."""
+    parser = optparse.OptionParser(usage)
+    parser.add_option('-f', '--force', dest="force", action="store_true", default=False,
+            help="force the reupload of all files")
+    options, args = parser.parse_args()
+    if len(args) > 1:
+        parser.error("too many arguments")
+    if args: cwd = args[0]
+    else: cwd = "."
+    repo = Repo(cwd)
+    get_ftp_creds(repo, options)
+    return repo, options, args
+
+class FtpData():
+    password = None
+    username = None
+    hostname = None
+    remotepath = None
+
+def get_ftp_creds(repo, options):
+    """
+    Retrieves the data to connect to the FTP from .git/ftpdata
+    or interactively.
+
+    ftpdata format example::
+
+        [ftp]
+        username=me
+        password=s00perP4zzw0rd
+        hostname=ftp.hostname.com
+        remotepath=/htdocs
+        repository=/home/me/website
+
+    Please note that it isn't necessary to have this file,
+    you'll be asked for the data every time you upload something.
+    """
+
+    ftpdata = os.path.join(repo.path, "ftpdata")
+    options.ftp = FtpData()
+    if os.path.isfile(ftpdata):
+        cfg = ConfigParser.ConfigParser()
+        cfg.read(ftpdata)
+
+        # just in case you do not want to store your ftp password.
+        try:
+            options.ftp.password = cfg.get('ftp','password')
+        except:
+            options.ftp.password = getpass.getpass('FTP Password: ')
+        options.ftp.username = cfg.get('ftp','username')
+        options.ftp.hostname = cfg.get('ftp','hostname')
+        options.ftp.remotepath = cfg.get('ftp','remotepath')
+    else:
+        options.ftp.username = raw_input('FTP Username: ')
+        options.ftp.password = getpass.getpass('FTP Password: ')
+        options.ftp.hostname = raw_input('FTP Hostname: ')
+        options.ftp.remotepath = raw_input('Remote Path: ')
+
+def upload_all(tree, ftp, base):
     """Upload all items in a Git tree.
 
     Keyword arguments:
@@ -57,7 +148,7 @@ def uploadAll(tree, ftp, base):
                 ftp.mkd(node.name)
             except ftplib.error_perm:
                 pass
-            uploadAll(node, ftp, '/'.join((base, node.name)))
+            upload_all(node, ftp, '/'.join((base, node.name)))
         else:
             file = cStringIO.StringIO(node.data)
             try:
@@ -68,7 +159,7 @@ def uploadAll(tree, ftp, base):
             ftp.voidcmd('SITE CHMOD 755 ' + node.name)
             print 'Uploaded ' + '/'.join((base, node.name))
 
-def uploadDiff(diff, tree, ftp, base):
+def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
 
     Keyword arguments:
@@ -105,7 +196,7 @@ def uploadDiff(diff, tree, ftp, base):
                         # This holds the risk of missing files to upload if
                         # the directory is created, but the files are not
                         # complete.
-                        uploadAll(node, ftp, target)
+                        upload_all(node, ftp, target)
                     except ftplib.error_perm:
                         pass
                 elif isinstance(node, Blob):
@@ -116,82 +207,5 @@ def uploadDiff(diff, tree, ftp, base):
                 # Don't do anything if there isn't any item; maybe it
                 # was deleted.
 
-def getFtpData():
-  """Retrieves the data to connect to the FTP from .git/ftpdata
-
-  ftpdata format example:
-   [ftp]
-   username=me
-   password=s00perP4zzw0rd
-   hostname=ftp.hostname.com
-   remotepath=/htdocs
-   repository=/home/me/website
-
-  Please note that it isn't necessary to have this file,
-  you'll be asked for the data every time you upload something.
-  """
-  FtpUser = FtpPassword = FtpHostname = ''
-  Repository = RemotePath = ''
-
-  if isfile(".git/ftpdata"):
-    cfg = ConfigParser.ConfigParser()
-    cfg.read(".git/ftpdata")
-
-    # just in case you do not want to store your ftp password.
-    try:
-      FtpPassword = cfg.get('ftp','password')
-    except:
-      FtpPassword = getpass('FTP Password: ')
-
-    FtpUser = cfg.get('ftp','username')
-    FtpHostname = cfg.get('ftp','hostname')
-    Repository = cfg.get('ftp','repository')
-    RemotePath = cfg.get('ftp','remotepath')
-  else:
-    FtpUser = raw_input('FTP Username: ')
-    FtpPassword = getpass('FTP Password: ')
-    FtpHostname = raw_input('FTP Hostname: ')
-    Repository = raw_input('Repository Path: ')
-    RemotePath = raw_input('Remote Path: ')
-
-  return {'username': FtpUser,
-          'password': FtpPassword,
-          'hostname': FtpHostname,
-          'repository': Repository,
-          'remotepath': RemotePath,
-          }
-
-# Begin main body
-
-# Parse arguments
-FtpData = getFtpData()
-username = FtpData['username']
-password = FtpData['password']
-ftpsite  = FtpData['hostname']
-base     = FtpData['remotepath']
-reposite = FtpData['repository']
-
-# Windows doesn't like env
-Git.git_binary = 'git'
-
-repo   = Repo(reposite)
-commit = repo.commits()[0]
-tree   = commit.tree
-ftp    = ftplib.FTP(ftpsite, username, password)
-
-# Check revision
-hashFile = cStringIO.StringIO()
-try:
-    ftp.retrbinary('RETR ' + base + '/git-rev.txt', hashFile.write)
-    hash = hashFile.getvalue()
-except ftplib.error_perm:
-    hash = 0
-
-if not hash:
-    # Perform full upload
-    uploadAll(tree, ftp, base)
-else:
-    uploadDiff(repo.diff(hash, commit.id).split("\n"), tree, ftp, base)
-
-ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.id))
-ftp.quit()
+if __name__ == "__main__":
+    main()
