@@ -204,7 +204,10 @@ def upload_diff(diff, tree, ftp, base):
                 except ftplib.error_perm:
                     pass
             else:
-                node = tree/file
+                components = file.split("/")
+                for c in components[:-1]:
+                    tree = tree/c
+                node = tree/components[-1]
                 if isinstance(node, Tree):
                     try:
                         ftp.mkd(target)
