@@ -205,9 +205,10 @@ def upload_diff(diff, tree, ftp, base):
                     pass
             else:
                 components = file.split("/")
+                subtree = tree
                 for c in components[:-1]:
-                    tree = tree/c
-                node = tree/components[-1]
+                    subtree = subtree/c
+                node = subtree/components[-1]
                 if isinstance(node, Tree):
                     try:
                         ftp.mkd(target)
