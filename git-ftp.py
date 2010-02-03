@@ -53,8 +53,8 @@ def main():
     ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
 
     # Check revision
-    hash = None
-    if not options.force:
+    hash = options.revision
+    if not options.force and not hash:
         hashFile = cStringIO.StringIO()
         try:
             ftp.retrbinary('RETR ' + base + '/git-rev.txt', hashFile.write)
@@ -66,7 +66,7 @@ def main():
         # Perform full upload
         upload_all(tree, ftp, base)
     else:
-        upload_diff(repo.diff(hash, commit.id).split("\n"), tree, ftp, base)
+        upload_diff(repo.git.diff("--name-status", hash, commit.id).split("\n"), tree, ftp, base)
 
     ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.id))
     ftp.quit()
@@ -82,6 +82,8 @@ that have changed."""
             help="force the reupload of all files")
     parser.add_option('-v', '--verbose', dest="verbose", action="store_true", default=False,
             help="be verbose")
+    parser.add_option('-r', '--revision', dest="revision", default=None,
+            help="use this revision instead of the server stored one")
     options, args = parser.parse_args()
     configure_logging(options)
     if len(args) > 1:
@@ -189,43 +191,38 @@ def upload_diff(diff, tree, ftp, base):
 
     """
     for line in diff:
-        if line.startswith('--- ') or line.startswith('+++ '):
-            delete = line.startswith('---')
-            file = line.split(' ', 1)[1]
-            if file == '/dev/null':
-                continue
-            # Remove bogus a or b directory git prepends to names
-            file = line.split('/', 1)[1]
-            target = '/'.join((base, file))
-            if delete:
+        if not line: continue
+        status, file = line.split()
+        target = '/'.join((base, file))
+        if status == "D":
+            try:
+                ftp.delete(target)
+                logging.info('Deleted ' + target)
+            except ftplib.error_perm:
+                pass
+        else:
+            components = file.split("/")
+            subtree = tree
+            for c in components[:-1]:
+                subtree = subtree/c
+            node = subtree/components[-1]
+            if isinstance(node, Tree):
                 try:
-                    ftp.delete(target)
-                    logging.info('Deleted ' + target)
+                    ftp.mkd(target)
+                    logging.info('Created directory ' + target)
+                    # This holds the risk of missing files to upload if
+                    # the directory is created, but the files are not
+                    # complete.
+                    upload_all(node, ftp, target)
                 except ftplib.error_perm:
                     pass
-            else:
-                components = file.split("/")
-                subtree = tree
-                for c in components[:-1]:
-                    subtree = subtree/c
-                node = subtree/components[-1]
-                if isinstance(node, Tree):
-                    try:
-                        ftp.mkd(target)
-                        logging.info('Created directory ' + target)
-                        # This holds the risk of missing files to upload if
-                        # the directory is created, but the files are not
-                        # complete.
-                        upload_all(node, ftp, target)
-                    except ftplib.error_perm:
-                        pass
-                elif isinstance(node, Blob):
-                    file = cStringIO.StringIO(node.data)
-                    ftp.storbinary('STOR ' + target, file)
-                    ftp.voidcmd('SITE CHMOD 755 ' + target)
-                    logging.info('Uploaded ' + target)
-                # Don't do anything if there isn't any item; maybe it
-                # was deleted.
+            elif isinstance(node, Blob):
+                file = cStringIO.StringIO(node.data)
+                ftp.storbinary('STOR ' + target, file)
+                ftp.voidcmd('SITE CHMOD 755 ' + target)
+                logging.info('Uploaded ' + target)
+            # Don't do anything if there isn't any item; maybe it
+            # was deleted.
 
 if __name__ == "__main__":
     main()
