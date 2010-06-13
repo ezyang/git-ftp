@@ -48,7 +48,7 @@ def main():
         logging.warning("Working copy is dirty; uncommitted changes will NOT be uploaded")
 
     base = options.ftp.remotepath
-    commit = repo.commits()[0]
+    commit = repo.commit()
     tree   = commit.tree
     ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
 
@@ -66,9 +66,9 @@ def main():
         # Perform full upload
         upload_all(tree, ftp, base)
     else:
-        upload_diff(repo.git.diff("--name-status", hash, commit.id).split("\n"), tree, ftp, base)
+        upload_diff(repo.git.diff("--name-status", hash, commit.sha).split("\n"), tree, ftp, base)
 
-    ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.id))
+    ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.sha))
     ftp.quit()
 
 def parse_args():
@@ -126,7 +126,7 @@ def get_ftp_creds(repo, options):
     you'll be asked for the data every time you upload something.
     """
 
-    ftpdata = os.path.join(repo.path, "ftpdata")
+    ftpdata = os.path.join(repo.git_dir, "ftpdata")
     options.ftp = FtpData()
     if os.path.isfile(ftpdata):
         logging.info("Using .git/ftpdata")
