@@ -158,24 +158,23 @@ def upload_all(tree, ftp, base):
             slash.
 
     """
-    for item in tree.items():
-        node = tree[item[0]]
+    for subtree in tree.trees:
         ftp.cwd(base)
-        if isinstance(node, Tree):
-            try:
-                ftp.mkd(node.name)
-            except ftplib.error_perm:
-                pass
-            upload_all(node, ftp, '/'.join((base, node.name)))
-        else:
-            file = cStringIO.StringIO(node.data)
-            try:
-                ftp.delete(node.name)
-            except ftplib.error_perm:
-                pass
-            ftp.storbinary('STOR ' + node.name, file)
-            ftp.voidcmd('SITE CHMOD 755 ' + node.name)
-            logging.info('Uploaded ' + '/'.join((base, node.name)))
+        try:
+            ftp.mkd(subtree.name)
+        except ftplib.error_perm:
+            pass
+        upload_all(subtree, ftp, '/'.join((base, subtree.name)))
+
+    for blob in tree.blobs:
+        file = cStringIO.StringIO(blob.data)
+        try:
+            ftp.delete(blob.name)
+        except ftplib.error_perm:
+            pass
+        ftp.storbinary('STOR ' + blob.name, file)
+        ftp.voidcmd('SITE CHMOD 755 ' + blob.name)
+        logging.info('Uploaded ' + '/'.join((base, blob.name)))
 
 def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
