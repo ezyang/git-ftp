@@ -181,8 +181,7 @@ def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
 
     Keyword arguments:
-    diff -- a unified diff split into an array by newlines. Usually generated
-            with: repo.diff(orig_id, new_id).split("\n")
+    diff -- a diff of --name-status
     tree -- root git.Tree that diff file paths can be resolved to.
     ftp  -- the active ftplib.FTP object to upload contents to
     base -- the string base directory to upload contents to in ftp. For example,
@@ -192,7 +191,7 @@ def upload_diff(diff, tree, ftp, base):
     """
     for line in diff:
         if not line: continue
-        status, file = line.split()
+        status, file = line.split("\t", 1)
         target = '/'.join((base, file))
         if status == "D":
             try:
