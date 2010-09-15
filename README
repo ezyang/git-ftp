@@ -1,0 +1,9 @@
+git-ftp.py : quick and efficient publishing of Git repositories over FTP
+
+Some web hosts only give you FTP access to the hosting space, but
+you would still like to use Git to version the contents of your
+directory.  You could upload a full tarball of your website every
+time you update but that's wasteful.  git-ftp.py only uploads the
+files that changed.
+
+Requirements: git-python 3.x <http://gitorious.org/git-python>

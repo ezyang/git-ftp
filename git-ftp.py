@@ -66,9 +66,9 @@ def main():
         # Perform full upload
         upload_all(tree, ftp, base)
     else:
-        upload_diff(repo.git.diff("--name-status", hash, commit.sha).split("\n"), tree, ftp, base)
+        upload_diff(repo.git.diff("--name-status", hash, commit.hexsha).split("\n"), tree, ftp, base)
 
-    ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.sha))
+    ftp.storbinary('STOR ' + base + '/git-rev.txt', cStringIO.StringIO(commit.hexsha))
     ftp.quit()
 
 def parse_args():
@@ -170,13 +170,12 @@ def upload_all(tree, ftp, base):
         upload_all(subtree, ftp, '/'.join((base, subtree.name)))
 
     for blob in tree.blobs:
-        file = cStringIO.StringIO(blob.data)
         logging.info('Uploading ' + '/'.join((base, blob.name)))
         try:
             ftp.delete(blob.name)
         except ftplib.error_perm:
             pass
-        ftp.storbinary('STOR ' + blob.name, file)
+        ftp.storbinary('STOR ' + blob.name, blob.data_stream)
         ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.name)
 
 def upload_diff(diff, tree, ftp, base):
@@ -221,9 +220,8 @@ def upload_diff(diff, tree, ftp, base):
                     # complete.
                     upload_all(node, ftp, target)
             elif isinstance(node, Blob):
-                file = cStringIO.StringIO(node.data)
                 logging.info('Uploading ' + target)
-                ftp.storbinary('STOR ' + target, file)
+                ftp.storbinary('STOR ' + target, node.data_stream)
                 ftp.voidcmd('SITE CHMOD ' + format_mode(node.mode) + ' ' + target)
             # Don't do anything if there isn't any item; maybe it
             # was deleted.
