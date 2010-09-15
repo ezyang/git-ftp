@@ -102,6 +102,9 @@ def configure_logging(options):
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
+def format_mode(mode):
+    return "%o" % (mode & 0o777)
+
 class FtpData():
     password = None
     username = None
@@ -174,7 +177,7 @@ def upload_all(tree, ftp, base):
         except ftplib.error_perm:
             pass
         ftp.storbinary('STOR ' + blob.name, file)
-        ftp.voidcmd('SITE CHMOD 755 ' + blob.name)
+        ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.name)
 
 def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
@@ -221,7 +224,7 @@ def upload_diff(diff, tree, ftp, base):
                 file = cStringIO.StringIO(node.data)
                 logging.info('Uploading ' + target)
                 ftp.storbinary('STOR ' + target, file)
-                ftp.voidcmd('SITE CHMOD 755 ' + target)
+                ftp.voidcmd('SITE CHMOD ' + format_mode(node.mode) + ' ' + target)
             # Don't do anything if there isn't any item; maybe it
             # was deleted.
 
