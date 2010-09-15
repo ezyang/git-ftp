@@ -168,13 +168,13 @@ def upload_all(tree, ftp, base):
 
     for blob in tree.blobs:
         file = cStringIO.StringIO(blob.data)
+        logging.info('Uploading ' + '/'.join((base, blob.name)))
         try:
             ftp.delete(blob.name)
         except ftplib.error_perm:
             pass
         ftp.storbinary('STOR ' + blob.name, file)
         ftp.voidcmd('SITE CHMOD 755 ' + blob.name)
-        logging.info('Uploaded ' + '/'.join((base, blob.name)))
 
 def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
@@ -205,20 +205,23 @@ def upload_diff(diff, tree, ftp, base):
                 subtree = subtree/c
             node = subtree/components[-1]
             if isinstance(node, Tree):
+                init_dir = False
                 try:
+                    logging.info('Creating directory ' + target)
                     ftp.mkd(target)
-                    logging.info('Created directory ' + target)
+                    init_dir = True
+                except ftplib.error_perm:
+                    pass
+                if init_dir:
                     # This holds the risk of missing files to upload if
                     # the directory is created, but the files are not
                     # complete.
                     upload_all(node, ftp, target)
-                except ftplib.error_perm:
-                    pass
             elif isinstance(node, Blob):
                 file = cStringIO.StringIO(node.data)
+                logging.info('Uploading ' + target)
                 ftp.storbinary('STOR ' + target, file)
                 ftp.voidcmd('SITE CHMOD 755 ' + target)
-                logging.info('Uploaded ' + target)
             # Don't do anything if there isn't any item; maybe it
             # was deleted.
 
