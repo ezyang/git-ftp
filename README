@@ -26,6 +26,27 @@ remotepath=/htdocs/staging
 
 Each section corresponds to a git branch.
 
+----
+
+An additional script post-receive is provided to allow a central bare repository
+to act as a proxy between the git users and the ftp server.
+One advantage is that users do not get to know the ftp credentials (perfect for interns).
+This is how it would look:
+
+User1 --+                          +--> FTP_staging
+         \                        /
+User2 -----> Git bare repository -----> FTP_master
+         /                        \
+User3 --+                          +--> FTP_dev
+
+This is how the setup looks like
+root@server:/path-to-repo/repo.git# ls
+HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info  objects  packed-refs  refs
+root@server:/path-to-repo/repo.git# ls hooks -l
+total 0
+lrwxrwxrwx 1 root    root      29 Aug 19 17:17 post-receive -> /path-to-git-ftp/post-receive
+
+
 License:
 
 Permission is hereby granted, free of charge, to any person
