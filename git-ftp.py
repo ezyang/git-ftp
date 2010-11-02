@@ -36,6 +36,7 @@ import getpass
 import ConfigParser
 import optparse
 import logging
+import textwrap
 
 from git import Tree, Blob, Repo, Git
 
@@ -72,12 +73,13 @@ def main():
     ftp.quit()
 
 def parse_args():
-    usage = """usage: %prog [DIRECTORY]
-
-This script uploads files in a Git repository to a
-website via FTP, but is smart and only uploads file
-that have changed."""
-    parser = optparse.OptionParser(usage)
+    usage = 'usage: %prog [OPTIONS] [DIRECTORY]'
+    desc = """\
+           This script uploads files in a Git repository to a
+           website via FTP, but is smart and only uploads file
+           that have changed.
+           """
+    parser = optparse.OptionParser(usage, description=textwrap.dedent(desc))
     parser.add_option('-f', '--force', dest="force", action="store_true", default=False,
             help="force the reupload of all files")
     parser.add_option('-v', '--verbose', dest="verbose", action="store_true", default=False,
