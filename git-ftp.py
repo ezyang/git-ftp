@@ -169,6 +169,7 @@ def upload_all(tree, ftp, base):
             pass
         upload_all(subtree, ftp, '/'.join((base, subtree.name)))
 
+    ftp.cwd(base)
     for blob in tree.blobs:
         logging.info('Uploading ' + '/'.join((base, blob.name)))
         try:
