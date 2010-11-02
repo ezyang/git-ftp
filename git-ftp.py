@@ -40,6 +40,9 @@ import textwrap
 
 from git import Tree, Blob, Repo, Git
 
+class BranchNotFound(Exception):
+    pass
+
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
 
@@ -49,7 +52,11 @@ def main():
         logging.warning("Working copy is dirty; uncommitted changes will NOT be uploaded")
 
     base = options.ftp.remotepath
-    commit = repo.commit()
+    try:
+        branch = (h for h in repo.heads if h.name == options.branch).next()
+    except StopIteration:
+        raise BranchNotFound
+    commit = branch.commit
     tree   = commit.tree
     ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
 
@@ -86,6 +93,8 @@ def parse_args():
             help="be verbose")
     parser.add_option('-r', '--revision', dest="revision", default=None,
             help="use this revision instead of the server stored one")
+    parser.add_option('-b', '--branch', dest="branch", default=None,
+            help="use this branch instead of the active one")
     options, args = parser.parse_args()
     configure_logging(options)
     if len(args) > 1:
@@ -93,6 +102,10 @@ def parse_args():
     if args: cwd = args[0]
     else: cwd = "."
     repo = Repo(cwd)
+
+    if not options.branch:
+        options.branch = repo.active_branch.name
+
     get_ftp_creds(repo, options)
     return repo, options, args
 
