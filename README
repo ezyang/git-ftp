@@ -12,12 +12,19 @@ Usage: python git-ftp.py
 
 You can place FTP credentials in .git/ftpdata, as such:
 
-[ftp]
+[master]
 username=me
 password=s00perP4zzw0rd
 hostname=ftp.hostname.com
 remotepath=/htdocs
-repository=/home/me/website
+
+[staging]
+username=me
+password=s00perP4zzw0rd
+hostname=ftp.hostname.com
+remotepath=/htdocs/staging
+
+Each section corresponds to a git branch.
 
 License:
 

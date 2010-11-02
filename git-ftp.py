@@ -43,6 +43,9 @@ from git import Tree, Blob, Repo, Git
 class BranchNotFound(Exception):
     pass
 
+class FtpDataOldVersion(Exception):
+    pass
+
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
 
@@ -131,14 +134,13 @@ def get_ftp_creds(repo, options):
     Retrieves the data to connect to the FTP from .git/ftpdata
     or interactively.
 
-    ftpdata format example::
+    ftpdata format example:
 
-        [ftp]
+        [branch]
         username=me
         password=s00perP4zzw0rd
         hostname=ftp.hostname.com
         remotepath=/htdocs
-        repository=/home/me/website
 
     Please note that it isn't necessary to have this file,
     you'll be asked for the data every time you upload something.
@@ -151,14 +153,19 @@ def get_ftp_creds(repo, options):
         cfg = ConfigParser.ConfigParser()
         cfg.read(ftpdata)
 
+        if (not cfg.has_section(options.branch)) and cfg.has_section('ftp'):
+            raise FtpDataOldVersion("Please rename the [ftp] section to [branch]. " +
+                                    "Take a look at the README for more information")
+
         # just in case you do not want to store your ftp password.
         try:
-            options.ftp.password = cfg.get('ftp','password')
-        except:
+            options.ftp.password = cfg.get(options.branch,'password')
+        except ConfigParser.NoOptionError:
             options.ftp.password = getpass.getpass('FTP Password: ')
-        options.ftp.username = cfg.get('ftp','username')
-        options.ftp.hostname = cfg.get('ftp','hostname')
-        options.ftp.remotepath = cfg.get('ftp','remotepath')
+
+        options.ftp.username = cfg.get(options.branch,'username')
+        options.ftp.hostname = cfg.get(options.branch,'hostname')
+        options.ftp.remotepath = cfg.get(options.branch,'remotepath')
     else:
         options.ftp.username = raw_input('FTP Username: ')
         options.ftp.password = getpass.getpass('FTP Password: ')
