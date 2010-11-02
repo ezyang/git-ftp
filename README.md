@@ -1,4 +1,8 @@
-git-ftp.py : quick and efficient publishing of Git repositories over FTP
+git-ftp.py: quick and efficient publishing of Git repositories over FTP
+=======================================================================
+
+Introduction
+------------
 
 Some web hosts only give you FTP access to the hosting space, but
 you would still like to use Git to version the contents of your
@@ -6,48 +10,55 @@ directory.  You could upload a full tarball of your website every
 time you update but that's wasteful.  git-ftp.py only uploads the
 files that changed.
 
-Requirements: git-python 3.x <http://gitorious.org/git-python>
+Requirements: [git-python 3.x](http://gitorious.org/git-python)  
+it can be installed with `easy_install gitpython`
 
-Usage: python git-ftp.py
+Usage: `python git-ftp.py`
 
-You can place FTP credentials in .git/ftpdata, as such:
+Storing the FTP credentials
+---------------------------
 
-[master]
-username=me
-password=s00perP4zzw0rd
-hostname=ftp.hostname.com
-remotepath=/htdocs
+You can place FTP credentials in `.git/ftpdata`, as such:
 
-[staging]
-username=me
-password=s00perP4zzw0rd
-hostname=ftp.hostname.com
-remotepath=/htdocs/staging
+    [master]
+    username=me
+    password=s00perP4zzw0rd
+    hostname=ftp.hostname.com
+    remotepath=/htdocs
+    
+    [staging]
+    username=me
+    password=s00perP4zzw0rd
+    hostname=ftp.hostname.com
+    remotepath=/htdocs/staging
 
 Each section corresponds to a git branch.
 
-----
+Using a bare repository as a proxy
+----------------------------------
 
 An additional script post-receive is provided to allow a central bare repository
 to act as a proxy between the git users and the ftp server.
-One advantage is that users do not get to know the ftp credentials (perfect for interns).
+One advantage is that **users do not get to know the ftp credentials** (perfect for interns).
 This is how it would look:
 
-User1 --+                          +--> FTP_staging
-         \                        /
-User2 -----> Git bare repository -----> FTP_master
-         /                        \
-User3 --+                          +--> FTP_dev
+    User1 --+                          +--> FTP_staging
+             \                        /
+    User2 -----> Git bare repository -----> FTP_master
+             /                        \
+    User3 --+                          +--> FTP_dev
 
-This is how the setup looks like
-root@server:/path-to-repo/repo.git# ls
-HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info  objects  packed-refs  refs
-root@server:/path-to-repo/repo.git# ls hooks -l
-total 0
-lrwxrwxrwx 1 root    root      29 Aug 19 17:17 post-receive -> /path-to-git-ftp/post-receive
+This is how the setup looks like:
+
+    root@server:/path-to-repo/repo.git# ls
+    HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info  objects  packed-refs  refs
+    root@server:/path-to-repo/repo.git# ls hooks -l
+    total 0
+    lrwxrwxrwx 1 root    root      29 Aug 19 17:17 post-receive -> /path-to-git-ftp/post-receive
 
 
-License:
+License
+--------
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
