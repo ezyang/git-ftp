@@ -51,7 +51,7 @@ def main():
 
     repo, options, args = parse_args()
 
-    if repo.is_dirty:
+    if repo.is_dirty and not options.commit:
         logging.warning("Working copy is dirty; uncommitted changes will NOT be uploaded")
 
     base = options.ftp.remotepath
@@ -60,6 +60,8 @@ def main():
     except StopIteration:
         raise BranchNotFound
     commit = branch.commit
+    if options.commit:
+        commit = repo.commit(options.commit)
     tree   = commit.tree
     ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
 
@@ -98,6 +100,8 @@ def parse_args():
             help="use this revision instead of the server stored one")
     parser.add_option('-b', '--branch', dest="branch", default=None,
             help="use this branch instead of the active one")
+    parser.add_option('-c', '--commit', dest="commit", default=None,
+            help="use this commit instead of HEAD")
     options, args = parser.parse_args()
     configure_logging(options)
     if len(args) > 1:
