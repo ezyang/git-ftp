@@ -191,14 +191,16 @@ def upload_diff(diff, tree, ftp, base):
             slash.
 
     """
+    dirs_present = []
+    ftp.cwd(base)
     for line in diff:
         if not line: continue
         status, file = line.split("\t", 1)
-        target = '/'.join((base, file))
+        full_path = '/'.join((base, file))
         if status == "D":
             try:
-                ftp.delete(target)
-                logging.info('Deleted ' + target)
+                ftp.delete(file)
+                logging.info('Deleted ' + full_path)
             except ftplib.error_perm:
                 pass
         else:
@@ -206,24 +208,19 @@ def upload_diff(diff, tree, ftp, base):
             subtree = tree
             for c in components[:-1]:
                 subtree = subtree/c
+                # We need to make sure the directory is present
+                if subtree.path not in dirs_present:
+                    try:
+                        ftp.mkd(subtree.path)
+                        dirs_present.append(subtree.path)
+                    except ftplib.error_perm:
+                        pass
             node = subtree/components[-1]
-            if isinstance(node, Tree):
-                init_dir = False
-                try:
-                    logging.info('Creating directory ' + target)
-                    ftp.mkd(target)
-                    init_dir = True
-                except ftplib.error_perm:
-                    pass
-                if init_dir:
-                    # This holds the risk of missing files to upload if
-                    # the directory is created, but the files are not
-                    # complete.
-                    upload_all(node, ftp, target)
-            elif isinstance(node, Blob):
-                logging.info('Uploading ' + target)
-                ftp.storbinary('STOR ' + target, node.data_stream)
-                ftp.voidcmd('SITE CHMOD ' + format_mode(node.mode) + ' ' + target)
+            assert isinstance(node, Blob)
+
+            logging.info('Uploading ' + full_path)
+            ftp.storbinary('STOR ' + file, node.data_stream)
+            ftp.voidcmd('SITE CHMOD ' + format_mode(node.mode) + ' ' + file)
             # Don't do anything if there isn't any item; maybe it
             # was deleted.
 
