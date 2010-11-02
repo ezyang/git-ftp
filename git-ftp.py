@@ -201,6 +201,22 @@ def upload_diff(diff, tree, ftp, base):
             try:
                 ftp.delete(file)
                 logging.info('Deleted ' + full_path)
+                # Now let's see if we need to remove some subdirectories
+                subtree = tree
+                dir_to_remove = []
+                def dir_reduce(dirs, dir):
+                    if dirs:
+                        return dirs + [dirs[-1] + '/' + dir]
+                    return [dir]
+                for dir in reduce(dir_reduce, file.split("/")[:-1], []):
+                    if subtree and dir[-1] in subtree:
+                        subtree = subtree/dir[-1]
+                    else:
+                        subtree = None
+                        dir_to_remove.append(dir)
+                dir_to_remove.reverse()
+                for dir in dir_to_remove:
+                    ftp.rmd(dir)
             except ftplib.error_perm:
                 pass
         else:
