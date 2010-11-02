@@ -38,9 +38,11 @@ Using a bare repository as a proxy
 ----------------------------------
 
 An additional script post-receive is provided to allow a central bare repository
-to act as a proxy between the git users and the ftp server.
-One advantage is that **users do not get to know the ftp credentials** (perfect for interns).
-This is how it would look:
+to act as a proxy between the git users and the ftp server.  
+Pushing on branches that don't have an entry in the `ftpdata` configuration file
+will have the default git behavior (`git-ftp.py` doesn't get called).
+One advantage is that **users do not get to know the ftp credentials** (perfect for interns).  
+This is how the workflow looks like:
 
     User1 --+                          +--> FTP_staging
              \                        /
@@ -48,13 +50,13 @@ This is how it would look:
              /                        \
     User3 --+                          +--> FTP_dev
 
-This is how the setup looks like:
+This is how the setup looks like (One `ftpdata` configuration file, and a symlink to the update hook):
 
     root@server:/path-to-repo/repo.git# ls
     HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info  objects  packed-refs  refs
     root@server:/path-to-repo/repo.git# ls hooks -l
     total 0
-    lrwxrwxrwx 1 root    root      29 Aug 19 17:17 post-receive -> /path-to-git-ftp/post-receive
+    lrwxrwxrwx 1 root    root      29 Aug 19 17:17 update -> /path-to-git-ftp/update-hook
 
 
 License

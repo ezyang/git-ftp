@@ -1,8 +1,0 @@
-#!/bin/bash
-while read line; do
-  BRANCH=`echo $line | cut -d / -f 3-`
-  if [[ `grep "^\[$BRANCH\]$" ftpdata` ]]; then
-    echo "Uploading $BRANCH..."
-    `dirname $0`/git-ftp.py -v -b $BRANCH
-  fi
-done
