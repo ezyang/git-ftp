@@ -94,8 +94,8 @@ def parse_args():
     parser = optparse.OptionParser(usage, description=textwrap.dedent(desc))
     parser.add_option('-f', '--force', dest="force", action="store_true", default=False,
             help="force the reupload of all files")
-    parser.add_option('-v', '--verbose', dest="verbose", action="store_true", default=False,
-            help="be verbose")
+    parser.add_option('-q', '--quiet', dest="quiet", action="store_true", default=False,
+            help="quiet output")
     parser.add_option('-r', '--revision', dest="revision", default=None,
             help="use this revision instead of the server stored one")
     parser.add_option('-b', '--branch', dest="branch", default=None,
@@ -118,7 +118,7 @@ def parse_args():
 
 def configure_logging(options):
     logger = logging.getLogger()
-    if options.verbose: logger.setLevel(logging.INFO)
+    if not options.quiet: logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stderr)
     formatter = logging.Formatter("%(levelname)s: %(message)s")
     ch.setFormatter(formatter)
