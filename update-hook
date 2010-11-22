@@ -7,6 +7,6 @@ NEW_COMMIT="$3"
 
 if [[ `grep "^\[$BRANCH\]$" ftpdata` ]]; then
     echo "Uploading $BRANCH..."
-    exec $(dirname $(readlink -f "$0"))/git-ftp.py -v -b "$BRANCH" -c "$NEW_COMMIT"
+    exec $(dirname $(readlink -f "$0"))/git-ftp.py -b "$BRANCH" -c "$NEW_COMMIT"
 fi
 true
