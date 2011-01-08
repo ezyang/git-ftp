@@ -51,7 +51,7 @@ def main():
 
     repo, options, args = parse_args()
 
-    if repo.is_dirty and not options.commit:
+    if repo.is_dirty() and not options.commit:
         logging.warning("Working copy is dirty; uncommitted changes will NOT be uploaded")
 
     base = options.ftp.remotepath
