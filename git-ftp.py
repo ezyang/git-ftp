@@ -268,7 +268,8 @@ def upload_diff(diff, tree, ftp, base):
 
 def is_special_file(name):
     """Returns true if a file is some special Git metadata and not content."""
-    return name.split('/')[-1] == '.gitignore'
+    leaf = name.split('/')[-1]
+    return leaf == '.gitignore' or leaf == '.gitattributes' or leaf == '.gitmodules'
 
 def upload_blob(blob, ftp, base):
     """Uploads a blob."""
