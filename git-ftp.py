@@ -197,13 +197,7 @@ def upload_all(tree, ftp, base):
 
     ftp.cwd(base)
     for blob in tree.blobs:
-        logging.info('Uploading ' + '/'.join((base, blob.name)))
-        try:
-            ftp.delete(blob.name)
-        except ftplib.error_perm:
-            pass
-        ftp.storbinary('STOR ' + blob.name, blob.data_stream)
-        ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.name)
+        upload_blob(blob, ftp, base)
 
 def upload_diff(diff, tree, ftp, base):
     """Upload and/or delete items according to a Git diff.
@@ -260,11 +254,25 @@ def upload_diff(diff, tree, ftp, base):
             node = subtree/components[-1]
             assert isinstance(node, Blob)
 
-            logging.info('Uploading ' + full_path)
-            ftp.storbinary('STOR ' + file, node.data_stream)
-            ftp.voidcmd('SITE CHMOD ' + format_mode(node.mode) + ' ' + file)
-            # Don't do anything if there isn't any item; maybe it
-            # was deleted.
+            upload_blob(node, ftp, base)
+
+def is_special_file(name):
+    """Returns true if a file is some special Git metadata and not content."""
+    return name.split('/')[-1] == '.gitignore'
+
+def upload_blob(blob, ftp, base):
+    """Uploads a blob."""
+    fullname = '/'.join([base, blob.name])
+    if is_special_file(blob.name):
+        logging.info('Skipped ' + fullname)
+        return
+    logging.info('Uploading ' + fullname)
+    try:
+        ftp.delete(blob.name)
+    except ftplib.error_perm:
+        pass
+    ftp.storbinary('STOR ' + blob.name, blob.data_stream)
+    ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.name)
 
 if __name__ == "__main__":
     main()
