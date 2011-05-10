@@ -84,13 +84,17 @@ def main():
             pass
 
     if not hash:
-        # Perform full upload
-        upload_all(tree, ftp)
+        # Diffing against an empty tree will cause a full upload.
+        # The sha is the result of `git mktree -z < /dev/null`.
+        hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
     else:
-        if hash == commit.hexsha:
-            logging.info("Nothing to do!")
-        else:
-            upload_diff(repo.git.diff("--name-status", hash, commit.hexsha).split("\n"), tree, ftp)
+        # Get the full length hexsha
+        hash = repo.commit(hash).hexsha
+
+    if hash == commit.hexsha:
+        logging.info("Nothing to do!")
+    else:
+        upload_diff(repo.git.diff("--name-status", hash, commit.hexsha).split("\n"), tree, ftp)
 
     ftp.storbinary('STOR git-rev.txt', cStringIO.StringIO(commit.hexsha))
     ftp.quit()
@@ -196,27 +200,6 @@ def get_ftp_creds(repo, options):
             cfg.set(options.branch, 'remotepath', options.ftp.remotepath)
             f = open(ftpdata, 'w')
             cfg.write(f)
-
-def upload_all(tree, ftp):
-    """Upload all items in a Git tree.
-
-    Keyword arguments:
-    tree -- the git.Tree to upload contents of
-    ftp  -- the active ftplib.FTP object to upload contents to
-    base -- the string base directory to upload contents to in ftp. For example,
-            base = '/www/www'. base must exist and must not have a trailing
-            slash.
-
-    """
-    for subtree in tree.trees:
-        try:
-            ftp.mkd(subtree.path)
-        except ftplib.error_perm:
-            pass
-        upload_all(subtree, ftp)
-
-    for blob in tree.blobs:
-        upload_blob(blob, ftp)
 
 def upload_diff(diff, tree, ftp):
     """Upload and/or delete items according to a Git diff.
