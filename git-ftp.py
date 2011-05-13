@@ -3,8 +3,9 @@
 """
 git-ftp: painless, quick and easy working copy syncing over FTP
 
-Copyright (c) 2008-2009
-Edward Z. Yang <ezyang@mit.edu> and Mauro Lizaur <mauro@cacavoladora.org>
+Copyright (c) 2008-2011
+Edward Z. Yang <ezyang@mit.edu>, Mauro Lizaur <mauro@cacavoladora.org> and
+Niklas Fiekas <niklas.fiekas@googlemail.com>
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -44,7 +45,7 @@ import textwrap
 # convenience keep track of this if you access the blob from an index.
 # This ends up considerably simplifying our code, but do be careful!
 
-from git import Tree, Blob, Repo, Git
+from git import Tree, Blob, Repo, Git, Submodule
 
 class BranchNotFound(Exception):
     pass
@@ -252,19 +253,40 @@ def upload_diff(repo, oldtree, tree, ftp, base):
                         break
         else:
             node = tree[file]
-            assert isinstance(node, Blob)
-            try:
-                upload_blob(node, ftp)
-            except ftplib.error_perm:
-                # ok, try building up the directory
+
+            if status == "A":
+                # try building up the parent directory
                 subtree = tree
-                for c in file.split("/")[:-1]:
+                if isinstance(node, Blob):
+                    directories = file.split("/")[:-1]
+                else:
+                    # for submodules also add the directory itself
+                    assert isinstance(node, Submodule)
+                    directories = file.split("/")
+                for c in directories:
                     subtree = subtree/c
                     try:
                         ftp.mkd(subtree.path)
                     except ftplib.error_perm:
                         pass
-                upload_blob(node, ftp, quiet = True)
+
+            if isinstance(node, Blob):
+                upload_blob(node, ftp)
+            else:
+                module = node.module()
+                module_tree = module.commit(node.hexsha).tree
+                if status == "A":
+                    module_oldtree = get_empty_tree(module)
+                else:
+                    oldnode = oldtree[file]
+                    assert isinstance(oldnode, Submodule) # TODO: What if not?
+                    module_oldtree = module.commit(oldnode.hexsha).tree
+                module_base = posixpath.join(base, node.path)
+                logging.info('Entering submodule %s', node.path)
+                ftp.cwd(module_base)
+                upload_diff(module, module_oldtree, module_tree, ftp, module_base)
+                logging.info('Leaving submodule %s', node.path)
+                ftp.cwd(base)
 
 def is_special_file(name):
     """Returns true if a file is some special Git metadata and not content."""
