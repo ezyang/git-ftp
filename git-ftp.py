@@ -85,16 +85,14 @@ def main():
 
     if not hash:
         # Diffing against an empty tree will cause a full upload.
-        # The sha is the result of `git mktree -z < /dev/null`.
-        hash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+        oldtree = get_empty_tree(repo)
     else:
-        # Get the full length hexsha
-        hash = repo.commit(hash).hexsha
+        oldtree = repo.commit(hash).tree
 
-    if hash == commit.hexsha:
-        logging.info("Nothing to do!")
+    if oldtree.hexsha == tree.hexsha:
+        logging.info('Nothing to do!')
     else:
-        upload_diff(repo.git.diff("--name-status", hash, commit.hexsha).split("\n"), tree, ftp)
+        upload_diff(repo, oldtree, tree, ftp, base)
 
     ftp.storbinary('STOR git-rev.txt', cStringIO.StringIO(commit.hexsha))
     ftp.quit()
@@ -201,21 +199,34 @@ def get_ftp_creds(repo, options):
             f = open(ftpdata, 'w')
             cfg.write(f)
 
-def upload_diff(diff, tree, ftp):
-    """Upload and/or delete items according to a Git diff.
+def get_empty_tree(repo):
+    return repo.tree(repo.git.hash_object('-w', '-t', 'tree', os.devnull))
+
+def upload_diff(repo, oldtree, tree, ftp, base):
+    """
+    Upload  and/or delete items according to a Git diff between two trees.
+
+    upload_diff requires, that the ftp working directory is set to the base
+    of the current repository before it is called.
 
     Keyword arguments:
-    diff -- a diff of --name-status
-    tree -- root git.Tree that diff file paths can be resolved to.
-    ftp  -- the active ftplib.FTP object to upload contents to
-    base -- the string base directory to upload contents to in ftp. For example,
-            base = '/www/www'. base must exist and must not have a trailing
-            slash.
+    repo    -- The git.Repo to upload objects from
+    oldtree -- The old tree to diff against. An empty tree will cause a full
+               upload of the new tree.
+    tree    -- The new tree. An empty tree will cause a full removal of all
+               objects of the old tree.
+    ftp     -- The active ftplib.FTP object to upload contents to
+    base    -- the string base directory to upload contents to in ftp.
+               For example, base = '/www/www'. base must exist and must not
+               have a trailing slash.
 
     """
+    diff = repo.git.diff("--name-status", oldtree.hexsha, tree.hexsha).split("\n")
     for line in diff:
         if not line: continue
         status, file = line.split("\t", 1)
+        assert status in ['A', 'D', 'M']
+
         if status == "D":
             try:
                 ftp.delete(file)
