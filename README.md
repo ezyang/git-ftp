@@ -56,7 +56,7 @@ This is how the setup looks like (One `ftpdata` configuration file, and a symlin
     HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info  objects  packed-refs  refs
     root@server:/path-to-repo/repo.git# ls hooks -l
     total 0
-    lrwxrwxrwx 1 root    root      29 Aug 19 17:17 update -> /path-to-git-ftp/update-hook
+    lrwxr-xr-x 1 root    root      29 Aug 19 17:17 post-receive -> /path-to-git-ftp/post-receive
 
 
 License

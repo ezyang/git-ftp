@@ -1,9 +1,8 @@
 #!/bin/bash
-# You may install this update hook in your remote git repository
+# You may install this post-receive hook in your remote git repository
 # to have automatic file upload when pushing to the repository.
-
-BRANCH=`echo $1 | cut -d / -f 3-`
-NEW_COMMIT="$3"
+read OLD_COMMIT NEW_COMMIT REFNAME
+BRANCH=${REFNAME#refs/heads/}
 
 if [[ `grep "^\[$BRANCH\]$" ftpdata` ]]; then
     echo "Uploading $BRANCH..."
