@@ -307,7 +307,12 @@ def upload_blob(blob, ftp, quiet = False):
     except ftplib.error_perm:
         pass
     ftp.storbinary('STOR ' + blob.path, blob.data_stream)
-    ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.path)
+    try:
+        ftp.voidcmd('SITE CHMOD ' + format_mode(blob.mode) + ' ' + blob.path)
+    except ftplib.error_perm:
+        # Ignore Windows chmod errors
+        logging.warning('Failed to chmod ' + blob.path)
+        pass
 
 def ask_ok(prompt, retries=4, complaint='Yes or no, please!'):
     while True:
