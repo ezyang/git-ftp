@@ -53,6 +53,9 @@ class BranchNotFound(Exception):
 class FtpDataOldVersion(Exception):
     pass
 
+class FtpSslNotSupported(Exception):
+    pass
+
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
 
@@ -71,7 +74,15 @@ def main():
     if options.commit:
         commit = repo.commit(options.commit)
     tree   = commit.tree
-    ftp    = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
+    if options.ftp.ssl:
+        if hasattr(ftplib, 'FTP_TLS'): # SSL new in 2.7+
+            ftp = ftplib.FTP_TLS(options.ftp.hostname, options.ftp.username, options.ftp.password)
+            ftp.prot_p()
+            logging.info("Using SSL")
+        else:
+            raise FtpSslNotSupported("Python is too old for FTP SSL. Try using Python 2.7 or later.")
+    else:
+        ftp = ftplib.FTP(options.ftp.hostname, options.ftp.username, options.ftp.password)
     ftp.cwd(base)
 
     # Check revision
@@ -146,6 +157,7 @@ class FtpData():
     username = None
     hostname = None
     remotepath = None
+    ssl = None
 
 def get_ftp_creds(repo, options):
     """
@@ -159,6 +171,7 @@ def get_ftp_creds(repo, options):
         password=s00perP4zzw0rd
         hostname=ftp.hostname.com
         remotepath=/htdocs
+        ssl=yes
 
     Please note that it isn't necessary to have this file,
     you'll be asked for the data every time you upload something.
@@ -184,11 +197,20 @@ def get_ftp_creds(repo, options):
         options.ftp.username = cfg.get(options.branch,'username')
         options.ftp.hostname = cfg.get(options.branch,'hostname')
         options.ftp.remotepath = cfg.get(options.branch,'remotepath')
+        try:
+            options.ftp.ssl = boolish(cfg.get(options.branch,'ssl'))
+        except ConfigParser.NoOptionError:
+            options.ftp.ssl = False
     else:
+        print "Please configure settings for branch '%s'" % options.branch
         options.ftp.username = raw_input('FTP Username: ')
         options.ftp.password = getpass.getpass('FTP Password: ')
         options.ftp.hostname = raw_input('FTP Hostname: ')
         options.ftp.remotepath = raw_input('Remote Path: ')
+        if hasattr(ftplib, 'FTP_TLS'):
+            options.ftp.ssl = ask_ok('Use SSL? ')
+        else:
+            logging.warning("SSL not supported, defaulting to no")
 
         # set default branch
         if ask_ok("Should I write ftp details to .git/ftpdata? "):
@@ -197,6 +219,7 @@ def get_ftp_creds(repo, options):
             cfg.set(options.branch, 'password', options.ftp.password)
             cfg.set(options.branch, 'hostname', options.ftp.hostname)
             cfg.set(options.branch, 'remotepath', options.ftp.remotepath)
+            cfg.set(options.branch, 'ssl', options.ftp.ssl)
             f = open(ftpdata, 'w')
             cfg.write(f)
 
@@ -314,13 +337,17 @@ def upload_blob(blob, ftp, quiet = False):
         logging.warning('Failed to chmod ' + blob.path)
         pass
 
+def boolish(s):
+    if s in ('1', 'true', 'y', 'ye', 'yes', 'on'): return True
+    if s in ('0', 'false', 'n', 'no', 'off'): return False
+    return None
+
 def ask_ok(prompt, retries=4, complaint='Yes or no, please!'):
     while True:
         ok = raw_input(prompt).lower()
-        if ok in ('y', 'ye', 'yes'):
-            return True
-        if ok in ('n', 'no', 'nop', 'nope'):
-            return False
+        r = boolish(ok)
+        if r is not None:
+            return r
         retries = retries - 1
         if retries < 0:
             raise IOError('Wrong user input.')

@@ -25,14 +25,17 @@ You can place FTP credentials in `.git/ftpdata`, as such:
     password=s00perP4zzw0rd
     hostname=ftp.hostname.com
     remotepath=/htdocs
-    
+    ssl=yes
+
     [staging]
     username=me
     password=s00perP4zzw0rd
     hostname=ftp.hostname.com
     remotepath=/htdocs/staging
+    ssl=no
 
-Each section corresponds to a git branch.
+Each section corresponds to a git branch. FTP SSL support needs Python
+2.7 or later.
 
 Using a bare repository as a proxy
 ----------------------------------
