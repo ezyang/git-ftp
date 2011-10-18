@@ -1,0 +1,126 @@
+.TH GIT\-FTP 1 18/10/2011 HEAD "Git Manual"
+.SH "NAME"
+git-ftp \- Quick and efficient publishing of Git repositories over FTP
+
+
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIgit ftp\fR [(\-\-force | \-f)] [(\-\-quiet | \-q)]
+        [(\-\-revision | \-r) <commit>] [(\-\-commit | \-c) <commit>]
+        [(\-\-branch | \-b) <branch>]
+.fi
+.sp
+
+
+.SH "DESCRIPTION"
+.sp
+Some web hosts only give you FTP access to the hosting space, but you would
+still like to use Git to version the contents of your directory. You could
+upload a full tarball of your website very time you update, but that's
+wasteful. \fIgit ftp\fR only uploads the files that changed.
+
+
+.SH "OPTIONS"
+
+.PP
+\-f, \-\-force
+.RS 4
+Force the reupload of all files instead of just the changed ones\&.
+.RE
+
+.PP
+\-q, \-\-quiet
+.RS 4
+Display only errors and warnings\&.
+.RE
+
+.PP
+\-r, \-\-revision
+.RS 4
+The SHA of the current revision is stored in \fIgit-rev.txt\fR on the server.
+Use this revision instead of the server stored one, to determine whch files
+have changed\&.
+.RE
+
+.PP
+\-c, \-\-commit
+.RS 4
+Upload this commit instead of HEAD or the tip of the selected branch\&.
+.RE
+
+.PP
+\-b, \-\-branch
+.RS 4
+Use this branch instead of the active one\&.
+.RE
+
+
+.SH "FTP CREDENTIALS"
+.sp
+You can place FTP credentials in \fI.git/ftpdata\fR, as such:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[master]
+username=me
+password=s00perP4zzw0rd
+hostname=ftp.hostname.com
+remotepath=/htdocs
+ssl=yes
+
+[staging]
+username=me
+password=s00perP4zzw0rd
+hostname=ftp.hostname.com
+remotepath=/htdocs/staging
+ssl=no
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Each section corresponds to a Git branch. If you don't create the configuration
+file, \fIgit ftp\fR will interactively prompt you.
+.sp
+FTP SSL support needs Python 2.7 or later.
+
+
+.SH "AUTHORS"
+.sp
+Copyright (c) 2008 - 2011
+Edward Z. Yang <ezyang@mit.edu>, Mauro Lizaur <mauro@cacavoladora.org> and
+Niklas Fiekas <niklas.fiekas@googlemail.com>
+.sp
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+.sp
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+.sp
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+
+.SH "REPORTING BUGS"
+Report bugs in the issue queue on Github
+<https://github.com/ezyang/git-ftp/issues> or email one of the authors.
+
+
+.SH "GIT"
+.sp
+Used as a part of the \fBgit\fR(1) suite.
