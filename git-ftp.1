@@ -17,7 +17,7 @@ git-ftp \- Quick and efficient publishing of Git repositories over FTP
 .sp
 Some web hosts only give you FTP access to the hosting space, but you would
 still like to use Git to version the contents of your directory. You could
-upload a full tarball of your website very time you update, but that's
+upload a full tarball of your website every time you update, but that's
 wasteful. \fIgit ftp\fR only uploads the files that changed.
 
 
@@ -36,21 +36,21 @@ Display only errors and warnings\&.
 .RE
 
 .PP
-\-r, \-\-revision
+\-r <commit>, \-\-revision=<commit>
 .RS 4
 The SHA of the current revision is stored in \fIgit-rev.txt\fR on the server.
-Use this revision instead of the server stored one, to determine whch files
+Use this revision instead of the server stored one, to determine which files
 have changed\&.
 .RE
 
 .PP
-\-c, \-\-commit
+\-c <commit>, \-\-commit=<commit>
 .RS 4
 Upload this commit instead of HEAD or the tip of the selected branch\&.
 .RE
 
 .PP
-\-b, \-\-branch
+\-b <branch>, \-\-branch=<branch>
 .RS 4
 Use this branch instead of the active one\&.
 .RE
