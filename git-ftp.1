@@ -88,7 +88,51 @@ file, \fIgit ftp\fR will interactively prompt you.
 FTP SSL support needs Python 2.7 or later.
 
 
-.SH "AUTHORS"
+.SH "USING A BARE REPOSITORY AS A PROXY"
+.sp
+An additional script \fIpost-recieve\fR is provided to allow a central bare
+repository to act as a proxy between the git users and the ftp server.
+.sp
+Pusing on branches that don't have an entry in the \fIftpdata\fR configuration file will have the default Git behaviour - nothing will be pushed over ftp.
+.sp
+One advantage is that users do not get to know the ftp credentials (perfect for
+interns).
+.sp
+This is how the workflow looks like:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+User 1 --+                              +--> FTP Staging
+          \\                            /
+User 2 -------> Bare Git repository -------> FTP Master
+          /                            \\
+User 3 --+                              +--> FTP Dev
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+This is how the setup looks like (one \fIftpdata\fR configuration file and a
+symlink to the update hook):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+user@server:/path-to-repo/repo.git$ ls
+HEAD  ORIG_HEAD  branches  config  description  ftpdata  hooks  info
+
+user@server:/path-to-repo/repo.git/hooks$ ls -l
+lrwxr-xr-x 1  user user  post-recieve -> /path-to-git-ftp/post-recieve
+.fi
+.if n \{\
+.RE
+.\}
+
+
+.SH "LICENSE"
 .sp
 Copyright (c) 2008 - 2011
 Edward Z. Yang <ezyang@mit.edu>, Mauro Lizaur <mauro@cacavoladora.org> and
