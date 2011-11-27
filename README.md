@@ -13,6 +13,10 @@ files that changed.
 Requirements: [git-python 3.x](http://gitorious.org/git-python)  
 it can be installed with `easy_install gitpython`
 
+We also [have a PPA](https://launchpad.net/~niklas-fiekas/+archive/ppa)
+which you can install with `sudo add-apt-repository ppa:niklas-fiekas/ppa`
+and then `sudo aptitude install git-ftp`.
+
 Usage: `python git-ftp.py`
 
 Storing the FTP credentials
