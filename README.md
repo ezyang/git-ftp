@@ -10,7 +10,7 @@ directory.  You could upload a full tarball of your website every
 time you update but that's wasteful.  git-ftp.py only uploads the
 files that changed.
 
-Requirements: [git-python 3.x](http://gitorious.org/git-python)  
+Requirements: [git-python 0.3.x](http://gitorious.org/git-python)  
 it can be installed with `easy_install gitpython`
 
 We also [have a PPA](https://launchpad.net/~niklas-fiekas/+archive/ppa)
