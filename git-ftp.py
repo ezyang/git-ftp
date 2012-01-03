@@ -45,6 +45,13 @@ import textwrap
 # convenience keep track of this if you access the blob from an index.
 # This ends up considerably simplifying our code, but do be careful!
 
+from distutils.version import LooseVersion
+from git import __version__ as git_version
+
+if LooseVersion(git_version) < '0.3.0':
+    print 'git-ftp requires git-python 0.3.0 or newer; %s provided.' % git_version
+    exit(1)
+
 from git import Tree, Blob, Repo, Git, Submodule
 
 class BranchNotFound(Exception):
