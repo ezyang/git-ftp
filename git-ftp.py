@@ -171,6 +171,7 @@ def main():
     if os.path.isfile(options.ftp.gitftpignore):
         with open(options.ftp.gitftpignore, 'r') as ftpignore:
             patterns = parse_ftpignore(ftpignore)
+        patterns.append('/' + options.ftp.gitftpignore)
 
     if not hash:
         # Diffing against an empty tree will cause a full upload.
@@ -408,12 +409,12 @@ def upload_diff(repo, oldtree, tree, ftp, base, ignored):
                 module_base = posixpath.join(base, node.path)
                 logging.info('Entering submodule %s', node.path)
                 ftp.cwd(module_base)
-                upload_diff(module, module_oldtree, module_tree, ftp, module_base)
+                upload_diff(module, module_oldtree, module_tree, ftp, module_base, ignored)
                 logging.info('Leaving submodule %s', node.path)
                 ftp.cwd(base)
 
 def is_ignored_path(path, patterns, quiet = False):
-    """Returns true if a filepath is ignored by ftpgitignore."""
+    """Returns true if a filepath is ignored by gitftpignore."""
     if is_special_file(path):
         if not quiet: logging.info('Skipped ' + path[1:])
         return True
@@ -424,7 +425,7 @@ def is_ignored_path(path, patterns, quiet = False):
 
 def is_special_file(name):
     """Returns true if a file is some special Git metadata and not content."""
-    return posixpath.basename(name) in ['.gitignore', '.gitattributes', '.gitmodules', '.gitftpignore']
+    return posixpath.basename(name) in ['.gitignore', '.gitattributes', '.gitmodules']
 
 def upload_blob(blob, ftp, quiet = False):
     """
