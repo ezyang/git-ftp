@@ -182,7 +182,7 @@ def main():
     if oldtree.hexsha == tree.hexsha:
         logging.info('Nothing to do!')
     else:
-        upload_diff(repo, oldtree, tree, ftp, base, patterns)
+        upload_diff(repo, oldtree, tree, ftp, [base], patterns)
 
     ftp.storbinary('STOR git-rev.txt', cStringIO.StringIO(commit.hexsha))
     ftp.quit()
@@ -335,8 +335,9 @@ def upload_diff(repo, oldtree, tree, ftp, base, ignored):
     tree    -- The new tree. An empty tree will cause a full removal of all
                objects of the old tree.
     ftp     -- The active ftplib.FTP object to upload contents to
-    base    -- The string base directory to upload contents to in ftp.
-               For example, base = '/www/www'. base must exist and must not
+    base    -- The list of base directory and submodule paths to upload contents
+               to in ftp.
+               For example, base = ['www', 'www']. base must exist and must not
                have a trailing slash.
     ignored -- The list of patterns explicitly ignored by gitftpignore.
 
@@ -349,8 +350,9 @@ def upload_diff(repo, oldtree, tree, ftp, base, ignored):
         status, file = line, next(diff)
         assert status in ['A', 'D', 'M']
 
-        if is_ignored_path('/' + file, ignored):
-            logging.info('Skipped ' + file)
+        filepath = posixpath.join(*(['/'] + base[1:] + [file]))
+        if is_ignored_path(filepath, ignored):
+            logging.info('Skipped ' + filepath)
             continue
 
         if status == "D":
@@ -406,17 +408,16 @@ def upload_diff(repo, oldtree, tree, ftp, base, ignored):
                     oldnode = oldtree[file]
                     assert isinstance(oldnode, Submodule) # TODO: What if not?
                     module_oldtree = module.commit(oldnode.hexsha).tree
-                module_base = posixpath.join(base, node.path)
+                module_base = base + [node.path]
                 logging.info('Entering submodule %s', node.path)
-                ftp.cwd(module_base)
+                ftp.cwd(posixpath.join(*module_base))
                 upload_diff(module, module_oldtree, module_tree, ftp, module_base, ignored)
                 logging.info('Leaving submodule %s', node.path)
-                ftp.cwd(base)
+                ftp.cwd(posixpath.join(*base))
 
 def is_ignored_path(path, patterns, quiet = False):
     """Returns true if a filepath is ignored by gitftpignore."""
     if is_special_file(path):
-        if not quiet: logging.info('Skipped ' + path[1:])
         return True
     for pat in patterns:
         if fnmatch2.fnmatch(path, pat):
