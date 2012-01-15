@@ -1,11 +1,12 @@
 #!/bin/bash
 # You may install this post-receive hook in your remote git repository
 # to have automatic file upload when pushing to the repository.
-read OLD_COMMIT NEW_COMMIT REFNAME
-BRANCH=${REFNAME#refs/heads/}
+while read OLD_COMMIT NEW_COMMIT REFNAME; do
+    BRANCH=${REFNAME#refs/heads/}
 
-if [[ `grep "^\[$BRANCH\]$" ftpdata` ]]; then
-    echo "Uploading $BRANCH..."
-    exec $(dirname $(readlink -f "$0"))/git-ftp.py -b "$BRANCH" -c "$NEW_COMMIT"
-fi
+    if [[ `grep "^\[$BRANCH\]$" ftpdata` ]]; then
+        echo "Uploading $BRANCH..."
+        $(dirname $(readlink -f "$0"))/git-ftp.py -b "$BRANCH" -c "$NEW_COMMIT"	|| exit $?
+    fi
+done
 true
