@@ -88,6 +88,30 @@ file, \fIgit ftp\fR will interactively prompt you.
 FTP SSL support needs Python 2.7 or later.
 
 
+.SH "EXCLUDING FILES FROM UPLOADING"
+.sp
+Similarly to \fI.gitignore\fR you can exclude files from uploading.
+.sp
+The default file with ignore patterns is \fI.gitftpignore\fR in project root,
+however you can specify your own for every branch in .git/ftpdata:
+.sp
+.if n\{\
+.RS 4
+.\}
+.nf
+[branch]
+ ... credentials ...
+gitftpignore=.my_gitftpignore
+.fi
+.if n\{\
+.RE
+.\}
+.sp
+Used syntax is same as gitignore's with the exception of overriding patterns,
+eg. "\fI!\fRsome/pattern", which is not supported.
+Negations within patterns works as expected.
+
+
 .SH "USING A BARE REPOSITORY AS A PROXY"
 .sp
 An additional script \fIpost-recieve\fR is provided to allow a central bare
