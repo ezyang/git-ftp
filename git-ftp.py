@@ -40,6 +40,7 @@ import ConfigParser
 import optparse
 import logging
 import textwrap
+import fnmatch
 
 # Note about Tree.path/Blob.path: *real* Git trees and blobs don't
 # actually provide path information, but the git-python bindings, as a
@@ -64,68 +65,48 @@ class FtpDataOldVersion(Exception):
 class FtpSslNotSupported(Exception):
     pass
 
-# Unfortunately Python's fnmatch don't support FNM_PATHNAME
-# so we have to roll our own
-class fnmatch2:
-    _cache = {}
+def split_pattern(path):
+    path = fnmatch.translate(path).split('\\/')
+    for i,p in enumerate(path[:-1]):
+        if p:
+            path[i] = p + '\\Z(?ms)'
+    return path
 
-    @classmethod
-    def fnmatch(cls, name, pat):
-        name = os.path.normcase(name)
-        pat = os.path.normcase(pat)
-        return cls.fnmatchcase(name, pat)
 
-    @classmethod
-    def fnmatchcase(cls, name, pat):
-        if not pat in cls._cache:
-            res = cls.translate(pat)
-            cls._cache[pat] = re.compile(res)
-        return cls._cache[pat].search(name) is not None
+def is_ignored(path, regex):
+    regex = split_pattern(os.path.normcase(regex))
+    path = os.path.normcase(path).split('/')
 
-    @classmethod
-    def translate(cls, pat):
-        '''
-        *       matches everything 
-        ?       matches any single character
-        [seq]   matches any character in seq
-        [!seq]  matches any character not in seq
+    regex_pos = path_pos = 0
+    if regex[0] == '': # leading slash - root dir must match
+        if path[0] != '' or not re.match(regex[1], path[1]):
+            return False
+        regex_pos = path_pos = 2
+    
+    if not regex_pos: # find beginning of regex
+        for i,p in enumerate(path):
+            if re.match(regex[0], p):
+                regex_pos = 1
+                path_pos = i + 1
+                break
+        else:
+            return False
+    
+    if len(path[path_pos:]) < len(regex[regex_pos:]):
+        return False
 
-        Slash (/) won't be matched by any wildcard.
-        '''
-        i, n = 0, len(pat)
-        res = ''
+    n = len(regex)
+    for r in regex[regex_pos:]: # match the rest
+        if regex_pos + 1 == n: # last item; if empty match anything
+            if re.match(r, ''):
+                return True
 
-        if pat.startswith('/'):
-            res = res + '^/'
-            i = i+1
-        while i < n:
-            c = pat[i]
-            i = i+1
-            if c == '*':
-                res = res + '[^/]*'
-            elif c == '?':
-                res = res + '[^/]'
-            elif c == '[':
-                j = i
-                if j < n and pat[j] == '!':
-                    j = j+1
-                if j < n and pat[j] == ']':
-                    j = j+1
-                while j < n and pat[j] != ']':
-                    j = j+1
-                if j >= n:
-                    res = res + '\\['
-                else:
-                    stuff = pat[i:j].replace('\\', '\\\\')
-                    i = j+1
-                    if stuff[0] == '!':
-                        stuff = '^' + stuff[1:]
-                    elif stuff[0] == '^':
-                        stuff = '\\' + stuff
-                    res = '%s[%s]' % (res, stuff)
-            else:
-                res = res + re.escape(c)
-        return res
+        if not re.match(r, path[path_pos]):
+            return False
+        path_pos += 1
+        regex_pos += 1
+    
+    return True
 
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
@@ -420,7 +401,7 @@ def is_ignored_path(path, patterns, quiet = False):
     if is_special_file(path):
         return True
     for pat in patterns:
-        if fnmatch2.fnmatch(path, pat):
+        if is_ignored(path, pat):
             return True
     return False
 
