@@ -149,8 +149,10 @@ def main():
 
     # Load ftpignore rules, if any
     patterns = []
-    if os.path.isfile(options.ftp.gitftpignore):
-        with open(options.ftp.gitftpignore, 'r') as ftpignore:
+
+    gitftpignore = os.path.join(repo.working_dir, options.ftp.gitftpignore)
+    if os.path.isfile(gitftpignore):
+        with open(gitftpignore, 'r') as ftpignore:
             patterns = parse_ftpignore(ftpignore)
         patterns.append('/' + options.ftp.gitftpignore)
 
