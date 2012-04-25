@@ -252,7 +252,7 @@ def upload_diff(repo, oldtree, tree, ftp, base):
                have a trailing slash.
 
     """
-    diff = repo.git.diff("--name-status", oldtree.hexsha, tree.hexsha).split("\n")
+    diff = repo.git.diff("--name-status", "--no-renames", oldtree.hexsha, tree.hexsha).split("\n")
     for line in diff:
         if not line: continue
         status, file = line.split("\t", 1)
