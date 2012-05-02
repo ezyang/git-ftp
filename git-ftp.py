@@ -326,7 +326,7 @@ def upload_diff(repo, oldtree, tree, ftp, base, ignored):
 
     """
     # -z is used so we don't have to deal with quotes in path matching
-    diff = repo.git.diff("--name-status", "-z", oldtree.hexsha, tree.hexsha)
+    diff = repo.git.diff("--name-status", "--no-renames", "-z", oldtree.hexsha, tree.hexsha)
     diff = iter(diff.split("\0"))
     for line in diff:
         if not line: continue
