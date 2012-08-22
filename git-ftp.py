@@ -98,7 +98,7 @@ def main():
         hashFile = cStringIO.StringIO()
         try:
             ftp.retrbinary('RETR git-rev.txt', hashFile.write)
-            hash = hashFile.getvalue()
+            hash = hashFile.getvalue().strip()
         except ftplib.error_perm:
             pass
 
