@@ -134,6 +134,8 @@ def parse_args():
             help="use this branch instead of the active one")
     parser.add_option('-c', '--commit', dest="commit", default=None,
             help="use this commit instead of HEAD")
+    parser.add_option('-s', '--section', dest="section", default=None,
+            help="use this section from ftpdata instead of branch name")
     options, args = parser.parse_args()
     configure_logging(options)
     if len(args) > 1:
@@ -144,6 +146,9 @@ def parse_args():
 
     if not options.branch:
         options.branch = repo.active_branch.name
+
+    if not options.section:
+        options.section = options.branch
 
     get_ftp_creds(repo, options)
     return repo, options, args
@@ -191,25 +196,25 @@ def get_ftp_creds(repo, options):
         logging.info("Using .git/ftpdata")
         cfg.read(ftpdata)
 
-        if (not cfg.has_section(options.branch)) and cfg.has_section('ftp'):
+        if (not cfg.has_section(options.section)) and cfg.has_section('ftp'):
             raise FtpDataOldVersion("Please rename the [ftp] section to [branch]. " +
                                     "Take a look at the README for more information")
 
         # just in case you do not want to store your ftp password.
         try:
-            options.ftp.password = cfg.get(options.branch,'password')
+            options.ftp.password = cfg.get(options.section,'password')
         except ConfigParser.NoOptionError:
             options.ftp.password = getpass.getpass('FTP Password: ')
 
-        options.ftp.username = cfg.get(options.branch,'username')
-        options.ftp.hostname = cfg.get(options.branch,'hostname')
-        options.ftp.remotepath = cfg.get(options.branch,'remotepath')
+        options.ftp.username = cfg.get(options.section,'username')
+        options.ftp.hostname = cfg.get(options.section,'hostname')
+        options.ftp.remotepath = cfg.get(options.section,'remotepath')
         try:
-            options.ftp.ssl = boolish(cfg.get(options.branch,'ssl'))
+            options.ftp.ssl = boolish(cfg.get(options.section,'ssl'))
         except ConfigParser.NoOptionError:
             options.ftp.ssl = False
     else:
-        print "Please configure settings for branch '%s'" % options.branch
+        print "Please configure settings for branch '%s'" % options.section
         options.ftp.username = raw_input('FTP Username: ')
         options.ftp.password = getpass.getpass('FTP Password: ')
         options.ftp.hostname = raw_input('FTP Hostname: ')
@@ -221,12 +226,12 @@ def get_ftp_creds(repo, options):
 
         # set default branch
         if ask_ok("Should I write ftp details to .git/ftpdata? "):
-            cfg.add_section(options.branch)
-            cfg.set(options.branch, 'username', options.ftp.username)
-            cfg.set(options.branch, 'password', options.ftp.password)
-            cfg.set(options.branch, 'hostname', options.ftp.hostname)
-            cfg.set(options.branch, 'remotepath', options.ftp.remotepath)
-            cfg.set(options.branch, 'ssl', options.ftp.ssl)
+            cfg.add_section(options.section)
+            cfg.set(options.section, 'username', options.ftp.username)
+            cfg.set(options.section, 'password', options.ftp.password)
+            cfg.set(options.section, 'hostname', options.ftp.hostname)
+            cfg.set(options.section, 'remotepath', options.ftp.remotepath)
+            cfg.set(options.section, 'ssl', options.ftp.ssl)
             f = open(ftpdata, 'w')
             cfg.write(f)
 
