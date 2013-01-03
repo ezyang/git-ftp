@@ -8,8 +8,9 @@ parse_ftpignore = git_ftp.parse_ftpignore
 is_ignored = git_ftp.is_ignored
 split_pattern = git_ftp.split_pattern
 
+
 class TestGitFtp(unittest.TestCase):
-    
+
     def test_parse_ftpignore(self):
         patterns = '''
 # comment and blank line
@@ -37,7 +38,7 @@ css/*less
         self.assertEqual(split_pattern('left[/right'), ['left\\[\\Z(?ms)', 'right\\Z(?ms)'])
         self.assertEqual(split_pattern('left[/notright]'), ['left[/notright]\\Z(?ms)'])
     pass
-    
+
     def test_is_ignored(self):
         self.assertTrue(is_ignored('/foo/bar/', 'bar/'), 'Ending slash matches only dir.')
         self.assertFalse(is_ignored('/foo/bar', 'bar/'), 'Ending slash matches only dir.')
