@@ -63,6 +63,9 @@ class FtpDataOldVersion(Exception):
 class FtpSslNotSupported(Exception):
     pass
 
+class SectionNotFound(Exception):
+    pass
+
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
 
@@ -196,9 +199,14 @@ def get_ftp_creds(repo, options):
         logging.info("Using .git/ftpdata")
         cfg.read(ftpdata)
 
-        if (not cfg.has_section(options.section)) and cfg.has_section('ftp'):
-            raise FtpDataOldVersion("Please rename the [ftp] section to [branch]. " +
-                                    "Take a look at the README for more information")
+        if (not cfg.has_section(options.section)):
+            if cfg.has_section('ftp'):
+                raise FtpDataOldVersion("Please rename the [ftp] section to [branch]. " +
+                                        "Take a look at the README for more information")
+            else:
+                raise SectionNotFound("Your .git/ftpdata file does not contain a section " +
+                                     "named '%s'" % options.section)
+
 
         # just in case you do not want to store your ftp password.
         try:
