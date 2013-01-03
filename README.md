@@ -46,6 +46,21 @@ You can place FTP credentials in `.git/ftpdata`, as such:
 Each section corresponds to a git branch. FTP SSL support needs Python
 2.7 or later.
 
+Exluding certain files from uploading
+-------------------------------------
+
+Similarly to `.gitignore` you can specify files which you do not wish to upload.
+The default file with ignore patterns is `.gitftpignore` in project root directory,
+however you can specify your own for every branch in .git/ftpdata:
+
+    [branch]
+    ... credentials ...
+    gitftpignore=.my_gitftpignore
+
+Used syntax is same as .gitignore's with the exception of overriding patterns,
+eg. `**!**some/pattern`, which is not supported
+Negations within patterns works as expected. 
+
 Using a bare repository as a proxy
 ----------------------------------
 

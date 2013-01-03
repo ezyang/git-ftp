@@ -3,7 +3,7 @@
 """
 git-ftp: painless, quick and easy working copy syncing over FTP
 
-Copyright (c) 2008-2011
+Copyright (c) 2008-2012
 Edward Z. Yang <ezyang@mit.edu>, Mauro Lizaur <mauro@cacavoladora.org> and
 Niklas Fiekas <niklas.fiekas@googlemail.com>
 
@@ -31,6 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import ftplib
 import cStringIO
+import re
 import sys
 import os.path
 import posixpath # use this for ftp manipulation
@@ -39,6 +40,7 @@ import ConfigParser
 import optparse
 import logging
 import textwrap
+import fnmatch
 
 # Note about Tree.path/Blob.path: *real* Git trees and blobs don't
 # actually provide path information, but the git-python bindings, as a
@@ -65,6 +67,49 @@ class FtpSslNotSupported(Exception):
 
 class SectionNotFound(Exception):
     pass
+
+def split_pattern(path):
+    path = fnmatch.translate(path).split('\\/')
+    for i,p in enumerate(path[:-1]):
+        if p:
+            path[i] = p + '\\Z(?ms)'
+    return path
+
+
+def is_ignored(path, regex):
+    regex = split_pattern(os.path.normcase(regex))
+    path = os.path.normcase(path).split('/')
+
+    regex_pos = path_pos = 0
+    if regex[0] == '': # leading slash - root dir must match
+        if path[0] != '' or not re.match(regex[1], path[1]):
+            return False
+        regex_pos = path_pos = 2
+
+    if not regex_pos: # find beginning of regex
+        for i,p in enumerate(path):
+            if re.match(regex[0], p):
+                regex_pos = 1
+                path_pos = i + 1
+                break
+        else:
+            return False
+
+    if len(path[path_pos:]) < len(regex[regex_pos:]):
+        return False
+
+    n = len(regex)
+    for r in regex[regex_pos:]: # match the rest
+        if regex_pos + 1 == n: # last item; if empty match anything
+            if re.match(r, ''):
+                return True
+
+        if not re.match(r, path[path_pos]):
+            return False
+        path_pos += 1
+        regex_pos += 1
+
+    return True
 
 def main():
     Git.git_binary = 'git' # Windows doesn't like env
@@ -105,6 +150,15 @@ def main():
         except ftplib.error_perm:
             pass
 
+    # Load ftpignore rules, if any
+    patterns = []
+
+    gitftpignore = os.path.join(repo.working_dir, options.ftp.gitftpignore)
+    if os.path.isfile(gitftpignore):
+        with open(gitftpignore, 'r') as ftpignore:
+            patterns = parse_ftpignore(ftpignore)
+        patterns.append('/' + options.ftp.gitftpignore)
+
     if not hash:
         # Diffing against an empty tree will cause a full upload.
         oldtree = get_empty_tree(repo)
@@ -114,10 +168,20 @@ def main():
     if oldtree.hexsha == tree.hexsha:
         logging.info('Nothing to do!')
     else:
-        upload_diff(repo, oldtree, tree, ftp, base)
+        upload_diff(repo, oldtree, tree, ftp, [base], patterns)
 
     ftp.storbinary('STOR git-rev.txt', cStringIO.StringIO(commit.hexsha))
     ftp.quit()
+
+def parse_ftpignore(rawPatterns):
+    patterns = []
+    for pat in rawPatterns:
+        pat = pat.rstrip()
+        if not pat or pat.startswith('#'):
+            continue
+        patterns.append(pat)
+    return patterns
+
 
 def parse_args():
     usage = 'usage: %prog [OPTIONS] [DIRECTORY]'
@@ -173,6 +237,7 @@ class FtpData():
     hostname = None
     remotepath = None
     ssl = None
+    gitftpignore = None
 
 def get_ftp_creds(repo, options):
     """
@@ -187,6 +252,7 @@ def get_ftp_creds(repo, options):
         hostname=ftp.hostname.com
         remotepath=/htdocs
         ssl=yes
+        gitftpignore=.gitftpignore
 
     Please note that it isn't necessary to have this file,
     you'll be asked for the data every time you upload something.
@@ -221,6 +287,11 @@ def get_ftp_creds(repo, options):
             options.ftp.ssl = boolish(cfg.get(options.section,'ssl'))
         except ConfigParser.NoOptionError:
             options.ftp.ssl = False
+
+        try:
+            options.ftp.gitftpignore = cfg.get(options.branch,'gitftpignore')
+        except ConfigParser.NoOptionError:
+            options.ftp.gitftpignore = '.gitftpignore'
     else:
         print "Please configure settings for branch '%s'" % options.section
         options.ftp.username = raw_input('FTP Username: ')
@@ -246,7 +317,7 @@ def get_ftp_creds(repo, options):
 def get_empty_tree(repo):
     return repo.tree(repo.git.hash_object('-w', '-t', 'tree', os.devnull))
 
-def upload_diff(repo, oldtree, tree, ftp, base):
+def upload_diff(repo, oldtree, tree, ftp, base, ignored):
     """
     Upload  and/or delete items according to a Git diff between two trees.
 
@@ -260,16 +331,25 @@ def upload_diff(repo, oldtree, tree, ftp, base):
     tree    -- The new tree. An empty tree will cause a full removal of all
                objects of the old tree.
     ftp     -- The active ftplib.FTP object to upload contents to
-    base    -- the string base directory to upload contents to in ftp.
-               For example, base = '/www/www'. base must exist and must not
+    base    -- The list of base directory and submodule paths to upload contents
+               to in ftp.
+               For example, base = ['www', 'www']. base must exist and must not
                have a trailing slash.
+    ignored -- The list of patterns explicitly ignored by gitftpignore.
 
     """
-    diff = repo.git.diff("--name-status", "--no-renames", oldtree.hexsha, tree.hexsha).split("\n")
+    # -z is used so we don't have to deal with quotes in path matching
+    diff = repo.git.diff("--name-status", "--no-renames", "-z", oldtree.hexsha, tree.hexsha)
+    diff = iter(diff.split("\0"))
     for line in diff:
         if not line: continue
-        status, file = line.split("\t", 1)
+        status, file = line, next(diff)
         assert status in ['A', 'D', 'M']
+
+        filepath = posixpath.join(*(['/'] + base[1:] + [file]))
+        if is_ignored_path(filepath, ignored):
+            logging.info('Skipped ' + filepath)
+            continue
 
         if status == "D":
             try:
@@ -324,12 +404,21 @@ def upload_diff(repo, oldtree, tree, ftp, base):
                     oldnode = oldtree[file]
                     assert isinstance(oldnode, Submodule) # TODO: What if not?
                     module_oldtree = module.commit(oldnode.hexsha).tree
-                module_base = posixpath.join(base, node.path)
+                module_base = base + [node.path]
                 logging.info('Entering submodule %s', node.path)
-                ftp.cwd(module_base)
-                upload_diff(module, module_oldtree, module_tree, ftp, module_base)
+                ftp.cwd(posixpath.join(*module_base))
+                upload_diff(module, module_oldtree, module_tree, ftp, module_base, ignored)
                 logging.info('Leaving submodule %s', node.path)
-                ftp.cwd(base)
+                ftp.cwd(posixpath.join(*base))
+
+def is_ignored_path(path, patterns, quiet = False):
+    """Returns true if a filepath is ignored by gitftpignore."""
+    if is_special_file(path):
+        return True
+    for pat in patterns:
+        if is_ignored(path, pat):
+            return True
+    return False
 
 def is_special_file(name):
     """Returns true if a file is some special Git metadata and not content."""
@@ -341,9 +430,6 @@ def upload_blob(blob, ftp, quiet = False):
     directory is the root directory of the repository being uploaded
     (that means DON'T use ftp.cwd; we'll use full paths appropriately).
     """
-    if is_special_file(blob.name):
-        if not quiet: logging.info('Skipped ' + blob.path)
-        return
     if not quiet: logging.info('Uploading ' + blob.path)
     try:
         ftp.delete(blob.path)
