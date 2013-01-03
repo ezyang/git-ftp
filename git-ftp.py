@@ -75,7 +75,8 @@ def split_pattern(path):
             path[i] = p + '\\Z(?ms)'
     return path
 
-
+# ezyang: This code is pretty skeevy; there is probably a better,
+# more obviously correct way of spelling it. Refactor me...
 def is_ignored(path, regex):
     regex = split_pattern(os.path.normcase(regex))
     path = os.path.normcase(path).split('/')
