@@ -8,7 +8,7 @@ git-ftp \- Quick and efficient publishing of Git repositories over FTP
 .nf
 \fIgit ftp\fR [(\-\-force | \-f)] [(\-\-quiet | \-q)]
         [(\-\-revision | \-r) <commit>] [(\-\-commit | \-c) <commit>]
-        [(\-\-branch | \-b) <branch>]
+        [(\-\-branch | \-b) <branch>] [(\-\-section | \-s) <section>]
 .fi
 .sp
 
@@ -55,6 +55,11 @@ Upload this commit instead of HEAD or the tip of the selected branch\&.
 Use this branch instead of the active one\&.
 .RE
 
+.PP
+\-s <section>, \-\-section=<section>
+.RS 4
+Use this section of the ftpdata file instead of the active branch name\&.
+.RE
 
 .SH "FTP CREDENTIALS"
 .sp
