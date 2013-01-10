@@ -73,7 +73,7 @@ class SectionNotFound(Exception):
     pass
 
 
-def split_pattern(path):
+def split_pattern(path):  # TODO: Improve skeevy code
     path = fnmatch.translate(path).split('\\/')
     for i, p in enumerate(path[:-1]):
         if p:
@@ -303,7 +303,7 @@ def get_ftp_creds(repo, options):
             options.ftp.ssl = False
 
         try:
-            options.ftp.gitftpignore = cfg.get(options.branch, 'gitftpignore')
+            options.ftp.gitftpignore = cfg.get(options.section, 'gitftpignore')
         except ConfigParser.NoOptionError:
             options.ftp.gitftpignore = '.gitftpignore'
     else:
