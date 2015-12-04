@@ -3,7 +3,7 @@
 #
 import unittest
 
-git_ftp = __import__('git-ftp', globals(), locals(), ['parse_ftpignore', 'is_ignored', 'split_pattern'], -1)
+git_ftp = __import__('git-ftp', globals(), locals(), ['parse_ftpignore', 'is_ignored', 'split_pattern'], 0)
 parse_ftpignore = git_ftp.parse_ftpignore
 is_ignored = git_ftp.is_ignored
 split_pattern = git_ftp.split_pattern
